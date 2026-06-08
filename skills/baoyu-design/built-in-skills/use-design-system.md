@@ -37,7 +37,7 @@ Before building, confirm with your harness's Ask-Question tool (Claude Code: `As
 2. **Which design system(s)** — list what discovery found, **multiSelect** so the user can pick **none** (free design), **one**, or **several**. With several selected, the **first selection** is the primary by default; confirm if they want a different primary.
 3. **(Optional) A starting point** — if a chosen system exposes `startingPoints[]`, offer them as seeds; otherwise offer its `cards[]` as reference or let the user design from scratch.
 
-If the user picks no design system, skip the rest of this flow (steps 3–7) and design normally — no `_ds/` folder, `designSystems: []`, `primaryDesignSystem: null`. You **still** get a `_d_meta.json`: `record-asset.mjs` creates it (with `type`/`createdAt`/`updatedAt`) the first time you record a deliverable as an asset — see ["Recording deliverables as assets"](#recording-deliverables-as-assets) below.
+If the user picks no design system, skip the rest of this flow (steps 3–8) and design normally — no `_ds/` folder, `designSystems: []`, `primaryDesignSystem: null`. You **still** get a `_d_meta.json`: `record-asset.mjs` creates it (with `type`/`createdAt`/`updatedAt`) the first time you record a deliverable as an asset — see ["Recording deliverables as assets"](#recording-deliverables-as-assets) below.
 
 ### 3. Import each selected design system
 
@@ -73,7 +73,16 @@ For **each** consumed system, add its global-CSS entry and (if you render compon
 
 Then pull components from each system's own namespace — `const { Button } = window.<Namespace>;`. Namespaces are unique per system, so JS/component scopes never collide. Global **CSS** is shared scope, though: order the `<link>`s so the **primary system loads last** and wins on same-named tokens (see "Multiple design systems" below).
 
-### 5. Seed a starting point (optional)
+### 5. Load the design system's skill (follow it as binding)
+
+Importing and wiring a system is **not** the same as *following* it. Before you design, **load the bound system's skill** and treat it as the visual contract — for **each** system you imported:
+
+- **Read its guide** from the copy: `_ds/<slug>/README.md` (the full guide — always copied) and `_ds/<slug>/SKILL.md` when present. The import script also prints this reminder.
+- **It is binding.** Every visual must follow it — don't invent colors, type, spacing, or components that aren't grounded in the system. Build from its tokens (`var(--*)` from its CSS; the exact names are in its README / `_ds_manifest.json`). With several systems, the **primary** owns the overall visual language; pull only specific components from the others.
+- **Scope — visual style only.** The design system is a *visual style reference*, nothing more. Its guide may describe example products, brands, or people that are unrelated to the user and to what they asked for. Never treat anything in the design system as a fact about the user, their work, or the topic of the conversation.
+- **Mine it for what you need.** Copy out the fonts and colors you use; for prototypes and designs, copy out any relevant components. If the system ships mocks of existing products and you're asked to design something similar, **fork those mocks** to start — it beats designing from scratch. The runtime copy under `_ds/<slug>/` holds the CSS + compiled bundle; the system's **source** (its `sourcePath` in `_d_meta.json`, e.g. `designs/<ds>/ui_kits/`, `preview/`, component files) is where the mocks, specimens, and component source live — read and fork from there.
+
+### 6. Seed a starting point (optional)
 
 If the user chose a starting point, seed it from the DS copy (the script doesn't do this — you do, after import):
 
@@ -82,7 +91,7 @@ If the user chose a starting point, seed it from the DS copy (the script doesn't
 
 Record the choice in the `startingPoint` field of `_d_meta.json` (with `dsSlug` so it's clear which system it came from).
 
-### 6. Record the binding in _d_meta.json
+### 7. Record the binding in _d_meta.json
 
 The script writes/merges `<project>/_d_meta.json` for you. Shape:
 
@@ -119,7 +128,7 @@ The script writes/merges `<project>/_d_meta.json` for you. Shape:
 - `assets` records the project's **UI entry points** (the HTML pages / `.dc.html` components you'd show the user) — a map keyed by display name, each with a `versions[]` list. It is **independent of `designSystems`** and present even when no design system is used. Each version is `{ path, createdAt, status, subtitle?, viewport?{width,height?}, chatId?, section? }`, with `path` project-relative and `status ∈ needs-review|approved|changes-requested`. Don't hand-write this — `record-asset.mjs` maintains it (see "Recording deliverables as assets" below).
 - The script merges — it preserves orchestrator-written fields (`title`, `prompt`, `startingPoint`, `assets`, …), sets `type:"design"` if absent, sets `createdAt` once, and bumps `updatedAt` each run. Add `title`/`prompt`/`startingPoint` yourself when creating the project.
 
-### 7. (Optional) Sanity-check the copy
+### 8. (Optional) Sanity-check the copy
 
 You can run the read-only checker against a consumed copy to confirm it's loadable:
 
@@ -131,7 +140,7 @@ node <skill>/agents/check-design-system.mjs <projectDir>/_ds/<slug>
 
 ## Recording deliverables as assets
 
-`_d_meta.json` also indexes the project's **deliverables** — the HTML pages and `.dc.html` components you'd actually show the user — under `assets` (shape in step 6 above). This is **independent of design systems**: every project has deliverables, so it applies even to a project that imported no system. Don't hand-edit `assets`; the `record-asset.mjs` helper maintains it — and it **bootstraps `_d_meta.json` itself** when the project has none yet (the no-design-system case):
+`_d_meta.json` also indexes the project's **deliverables** — the HTML pages and `.dc.html` components you'd actually show the user — under `assets` (shape in step 7 above). This is **independent of design systems**: every project has deliverables, so it applies even to a project that imported no system. Don't hand-edit `assets`; the `record-asset.mjs` helper maintains it — and it **bootstraps `_d_meta.json` itself** when the project has none yet (the no-design-system case):
 
 ```
 node <skill>/agents/record-asset.mjs <projectDir> <htmlPath> [flags]
@@ -157,9 +166,14 @@ node <skill>/agents/record-asset.mjs <projectDir> --remove [<htmlPath>] [--name 
 
 A path removes that one version (scoped to `--name` if also given); `--name` alone removes the whole asset. An asset whose last version is removed is deleted, and `assets` is dropped entirely once empty. Running `--remove` against a missing `_d_meta.json` is a no-op — it won't create an empty file.
 
-## Updating a project later
+## Resuming a project that already uses a design system
 
-Read `_d_meta.json` to recover which systems the project uses, then:
+When you open or continue an **existing** project (the folder already exists), don't assume a clean slate — **read `<projectDir>/_d_meta.json` first** to recover its design-system binding:
+
+- **`designSystems` is non-empty** → the project is bound. For **each** entry, **load its skill and follow it as binding** (step 5 above — read `_ds/<slug>/README.md`, and `_ds/<slug>/SKILL.md` when present) *before* you design, honoring `primaryDesignSystem` for token precedence. Then confirm the page wiring is intact (each system's `<link>` present, primary last; the bundle `<script>` present); re-import (below) only if a `_ds/<slug>/` copy is missing or stale. Don't re-ask which system to use — it's already chosen.
+- **`designSystems` is `[]`, or there is no `_d_meta.json`** → no system is bound; design normally. If the work would benefit from one, offer to add one (discovery in step 1).
+
+To then change what's bound, read `_d_meta.json` for the current systems and:
 
 - **Refresh a system** — re-run the import script for that `<dsDir>`. It overwrites `_ds/<slug>/` in place and updates only that entry in `designSystems[]` (idempotent: no duplicates, other entries and `createdAt`/`title`/`prompt` untouched).
 - **Add a system** — run the script for the new `<dsDir>`; it appends to `designSystems[]`. Add `--primary` if it should become primary.

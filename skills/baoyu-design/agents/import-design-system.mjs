@@ -122,10 +122,10 @@ for (const css of model.globalCssPaths) {
   for (const asset of cssAssetTargets(css)) copyOnce(asset);
 }
 const assetUrlCount = copied.size - cssCount;
-// 3. bundle + manifest + adherence + readme
+// 3. bundle + manifest + adherence + readme + skill
 const hasBundle = copyFileRel('_ds_bundle.js');
 if (hasBundle) copied.add('_ds_bundle.js');
-for (const f of ['_ds_manifest.json', '_adherence.oxlintrc.json', 'README.md']) copyOnce(f);
+for (const f of ['_ds_manifest.json', '_adherence.oxlintrc.json', 'README.md', 'SKILL.md']) copyOnce(f);
 // 4. shared runtime assets directory, if present
 const beforeAssets = copied.size;
 copyDirRel('assets');
@@ -185,7 +185,7 @@ out.push(`Imported "${dsName}" → ${toPosix(path.relative(process.cwd(), destRo
 out.push(
   `Copied ${copied.size} files: ${cssCount} CSS (@import closure), ` +
   `${assetUrlCount} url() asset(s), ${assetDirCount} assets/ file(s), ` +
-  `plus bundle/manifest/adherence/readme.`,
+  `plus bundle/manifest/adherence/readme/skill.`,
 );
 out.push(`_d_meta.json: designSystems["${dsSlug}"] recorded; primaryDesignSystem = "${meta.primaryDesignSystem}".`);
 out.push('');
@@ -195,6 +195,10 @@ else out.push('  (no global CSS entry found in this DS — only the bundle was c
 out.push(`  <script src="_ds/${dsSlug}/_ds_bundle.js"></script>`);
 const sample = (model.components[0] && model.components[0].name) || 'Button';
 out.push(`  then in a Babel script: const { ${sample} } = window.${model.namespace};`);
+
+out.push('');
+out.push("Next: load this system's skill and follow it as a BINDING visual style —");
+out.push(`  read _ds/${dsSlug}/README.md${copied.has('SKILL.md') ? ` (+ _ds/${dsSlug}/SKILL.md)` : ''} before designing.`);
 
 if (model.startingPoints.length) {
   out.push('');
