@@ -72,6 +72,23 @@ function findGlobalCssEntry(root, files) {
   return null;
 }
 
+// Fallback when the filename heuristic misses: trust the compiled manifest's
+// recorded closure. Its LAST entry is the importer/entry file (post-order), so
+// for a single-file closure it's the file itself. Returned only if it still
+// exists on disk; otherwise null (caller falls through to the warning). This is
+// what lets an SPA-extracted system (e.g. `colors_and_type.css`) resolve its
+// tokens without hardcoding every possible entry name.
+function manifestCssEntry(root) {
+  try {
+    const m = JSON.parse(read(path.join(root, '_ds_manifest.json')));
+    const paths = Array.isArray(m && m.globalCssPaths) ? m.globalCssPaths : [];
+    if (!paths.length) return null;
+    const entry = paths[paths.length - 1];
+    if (entry && fs.existsSync(path.join(root, entry))) return entry;
+  } catch { /* no/invalid manifest */ }
+  return null;
+}
+
 const IMPORT_RE = /@import\s+(?:url\(\s*)?["']([^"')]+)["']\s*\)?\s*;/g;
 
 // post-order @import closure: each file's imports come before the file itself.
@@ -355,7 +372,11 @@ export function buildModel(projectDir) {
   const issues = [];
 
   // --- global CSS + tokens ---
-  const globalCssEntry = findGlobalCssEntry(root, files);
+  // Prefer the filename heuristic; when it misses, fall back to the compiled
+  // manifest's recorded entry, then ALWAYS recompute the closure (so a newly
+  // added @import is still picked up on recompile).
+  let globalCssEntry = findGlobalCssEntry(root, files);
+  if (!globalCssEntry) globalCssEntry = manifestCssEntry(root);
   let globalCssPaths = [];
   let tokenInfo = { tokens: [], unclassified: [], valueByName: new Map() };
   if (globalCssEntry) {

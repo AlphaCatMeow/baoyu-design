@@ -53,10 +53,12 @@ The script reuses the read-only parser, so the copy set is exact and determinist
 
 - the global-CSS `@import` closure (every CSS file the entry transitively imports);
 - every local `url(...)` target in those CSS files (font binaries + images);
-- `_ds_bundle.js`, `_ds_manifest.json`, `_adherence.oxlintrc.json`, `README.md`;
+- `_ds_bundle.js`, `_ds_manifest.json`, `_adherence.oxlintrc.json`, `README.md`, and `SKILL.md` (when present);
 - the DS's `assets/` directory, if present.
 
-It writes **only** `_ds/<slug>/` and `_d_meta.json` — never the DS source, and it does not transpile (that stays with `compile-design-system.mjs`). It then prints the namespace, the exact `<link>`/`<script>` wiring lines, any starting points, and warnings (e.g. a missing bundle means the DS was never compiled — compile it first, then re-import).
+It also **generates `_ds/<slug>/_ds_prompt.md`** — the self-contained per-load design-system prompt (binding + scope + the full guide inlined + the exact `var(--*)` token allowlist + wiring), modeled on the web app's attached-skill block. It is generated, not copied; re-running the import regenerates it (that is the sync path).
+
+It writes **only** `_ds/<slug>/` and `_d_meta.json` — never the DS source, and it does not transpile (that stays with `compile-design-system.mjs`). It then prints the namespace, the exact `<link>`/`<script>` wiring lines, a reminder to read `_ds/<slug>/_ds_prompt.md`, any starting points, and warnings (e.g. a missing bundle means the DS was never compiled — compile it first, then re-import).
 
 ### 4. Wire it into your page
 
@@ -73,12 +75,12 @@ For **each** consumed system, add its global-CSS entry and (if you render compon
 
 Then pull components from each system's own namespace — `const { Button } = window.<Namespace>;`. Namespaces are unique per system, so JS/component scopes never collide. Global **CSS** is shared scope, though: order the `<link>`s so the **primary system loads last** and wins on same-named tokens (see "Multiple design systems" below).
 
-### 5. Load the design system's skill (follow it as binding)
+### 5. Load the design system's prompt (follow it as binding)
 
-Importing and wiring a system is **not** the same as *following* it. Before you design, **load the bound system's skill** and treat it as the visual contract — for **each** system you imported:
+Importing and wiring a system is **not** the same as *following* it. Before you design, **load the bound system's prompt** and treat it as the visual contract — for **each** system you imported:
 
-- **Read its guide** from the copy: `_ds/<slug>/README.md` (the full guide — always copied) and `_ds/<slug>/SKILL.md` when present. The import script also prints this reminder.
-- **It is binding.** Every visual must follow it — don't invent colors, type, spacing, or components that aren't grounded in the system. Build from its tokens (`var(--*)` from its CSS; the exact names are in its README / `_ds_manifest.json`). With several systems, the **primary** owns the overall visual language; pull only specific components from the others.
+- **Read `_ds/<slug>/_ds_prompt.md`** — the self-contained per-load prompt the importer generates: it states the binding + scope, reproduces the full guide inline, lists the exact `var(--*)` token allowlist, and gives the wiring. This is the one file to load every time you design. (`_ds/<slug>/README.md` and `_ds/<slug>/SKILL.md` are the deeper source refs if you need them; the import script prints a reminder.)
+- **It is binding.** Every visual must follow it — don't invent colors, type, spacing, or components that aren't grounded in the system. Build only from its tokens — use `var(--*)` names from the allowlist in `_ds_prompt.md`, and never guess a name (an unresolved `var()` silently falls back to the browser default). With several systems, the **primary** owns the overall visual language; pull only specific components from the others.
 - **Scope — visual style only.** The design system is a *visual style reference*, nothing more. Its guide may describe example products, brands, or people that are unrelated to the user and to what they asked for. Never treat anything in the design system as a fact about the user, their work, or the topic of the conversation.
 - **Mine it for what you need.** Copy out the fonts and colors you use; for prototypes and designs, copy out any relevant components. If the system ships mocks of existing products and you're asked to design something similar, **fork those mocks** to start — it beats designing from scratch. The runtime copy under `_ds/<slug>/` holds the CSS + compiled bundle; the system's **source** (its `sourcePath` in `_d_meta.json`, e.g. `designs/<ds>/ui_kits/`, `preview/`, component files) is where the mocks, specimens, and component source live — read and fork from there.
 
@@ -170,7 +172,7 @@ A path removes that one version (scoped to `--name` if also given); `--name` alo
 
 When you open or continue an **existing** project (the folder already exists), don't assume a clean slate — **read `<projectDir>/_d_meta.json` first** to recover its design-system binding:
 
-- **`designSystems` is non-empty** → the project is bound. For **each** entry, **load its skill and follow it as binding** (step 5 above — read `_ds/<slug>/README.md`, and `_ds/<slug>/SKILL.md` when present) *before* you design, honoring `primaryDesignSystem` for token precedence. Then confirm the page wiring is intact (each system's `<link>` present, primary last; the bundle `<script>` present); re-import (below) only if a `_ds/<slug>/` copy is missing or stale. Don't re-ask which system to use — it's already chosen.
+- **`designSystems` is non-empty** → the project is bound. For **each** entry, **load its prompt and follow it as binding** (step 5 above — read `_ds/<slug>/_ds_prompt.md`) *before* you design, honoring `primaryDesignSystem` for token precedence. Then confirm the page wiring is intact (each system's `<link>` present, primary last; the bundle `<script>` present); re-import (below) only if a `_ds/<slug>/` copy is missing or stale. Don't re-ask which system to use — it's already chosen.
 - **`designSystems` is `[]`, or there is no `_d_meta.json`** → no system is bound; design normally. If the work would benefit from one, offer to add one (discovery in step 1).
 
 To then change what's bound, read `_d_meta.json` for the current systems and:

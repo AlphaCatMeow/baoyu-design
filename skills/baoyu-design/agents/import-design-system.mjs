@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { buildModel } from './lib/ds-core.mjs';
 import { metaPathFor, readMeta, bootstrapMeta, writeMeta } from './lib/asset-store.mjs';
+import { renderDsPrompt } from './lib/ds-prompt.mjs';
 
 // --- args ---------------------------------------------------------------------
 const argv = process.argv.slice(2);
@@ -176,16 +177,33 @@ if (makePrimary || !meta.primaryDesignSystem) meta.primaryDesignSystem = dsSlug;
 
 writeMeta(metaPath, meta);
 
-// --- report -------------------------------------------------------------------
+// --- generate the per-load design-system prompt -------------------------------
 const entryCss = model.globalCssPaths.includes(model.globalCssEntry)
   ? model.globalCssEntry
   : null;
+let readmeContent = '';
+try { readmeContent = fs.readFileSync(path.join(dsDir, 'README.md'), 'utf8'); } catch { /* none */ }
+const promptMd = renderDsPrompt({
+  name: dsName,
+  slug: dsSlug,
+  namespace: model.namespace,
+  cssEntry: entryCss,
+  sampleComponent: (model.components[0] && model.components[0].name) || 'Button',
+  readme: readmeContent,
+  tokenNames: model.tokens.map((t) => t.name),
+  sourcePath: entry.sourcePath,
+  hasBundle,
+});
+fs.writeFileSync(path.join(destRoot, '_ds_prompt.md'), promptMd);
+copied.add('_ds_prompt.md');
+
+// --- report -------------------------------------------------------------------
 const out = [];
 out.push(`Imported "${dsName}" → ${toPosix(path.relative(process.cwd(), destRoot))}/  (namespace ${model.namespace})`);
 out.push(
-  `Copied ${copied.size} files: ${cssCount} CSS (@import closure), ` +
+  `Synced ${copied.size} files: ${cssCount} CSS (@import closure), ` +
   `${assetUrlCount} url() asset(s), ${assetDirCount} assets/ file(s), ` +
-  `plus bundle/manifest/adherence/readme/skill.`,
+  `plus bundle/manifest/adherence/readme/skill and a generated _ds_prompt.md.`,
 );
 out.push(`_d_meta.json: designSystems["${dsSlug}"] recorded; primaryDesignSystem = "${meta.primaryDesignSystem}".`);
 out.push('');
@@ -197,8 +215,9 @@ const sample = (model.components[0] && model.components[0].name) || 'Button';
 out.push(`  then in a Babel script: const { ${sample} } = window.${model.namespace};`);
 
 out.push('');
-out.push("Next: load this system's skill and follow it as a BINDING visual style —");
-out.push(`  read _ds/${dsSlug}/README.md${copied.has('SKILL.md') ? ` (+ _ds/${dsSlug}/SKILL.md)` : ''} before designing.`);
+out.push('Next: load this system as a BINDING visual style —');
+out.push(`  read _ds/${dsSlug}/_ds_prompt.md before designing`);
+out.push('  (binding + scope + the full guide + the exact var(--*) token allowlist + wiring).');
 
 if (model.startingPoints.length) {
   out.push('');
