@@ -174,6 +174,26 @@ python3 -m http.server 4311 --directory designs
 
 ---
 
+## Design systems
+
+Beyond one‑off mockups, the skill can hold a whole project to a **design system** — a versioned bundle of a brand's tokens, fonts, components, and full UI kits. Systems live next to your projects under `designs/`: author one with the *Create design system* built‑in skill, or drop in a pre‑built one. Once a system exists, two flows let any project consume it.
+
+### Import an existing design system
+
+When you start a design, the agent asks **where to save it** and **which design system(s) to use** — it discovers every system under `designs/` and lists them, so you can pick none (free design), one, or several. Name one up front and it skips the menu:
+
+> Design a settings screen using the **Fluent 2** design system.
+
+For each system you choose, the agent syncs a **self‑contained, version‑pinned copy** into your project at `_ds/<slug>/`, wires its CSS and component bundle into the page, and records the binding in the project's `_d_meta.json`. That local copy is what keeps the project portable and reproducible — nothing reaches outside the folder, and re‑running the import is how you pull updates later. Choose several systems and one becomes **primary** — it owns the overall look and wins any token collision, while the others lend specific components.
+
+### Use an imported design system
+
+Once a system is bound it acts as a **binding visual contract**, not a loose suggestion: every screen is built from the system's real tokens, type, spacing, and components, and the agent won't invent off‑system colors or styles. If the system ships **starting points** — ready‑made screens or components — you can seed a new design from one instead of starting blank.
+
+The binding travels with the project. Reopen it later and the agent reads `_d_meta.json`, reloads the system, and keeps designing in‑style — no need to re‑pick. From there you can **refresh** a system to pull updates, **add** another, **swap** which one is primary, or **remove** one entirely.
+
+---
+
 ## Example prompts
 
 - *"Design 3 hi‑fi variations of a pricing page using the brand in this screenshot."*
@@ -181,6 +201,7 @@ python3 -m http.server 4311 --directory designs
 - *"Make a 10‑slide deck from this PRD for an engineering all‑hands."*
 - *"Wireframe a few layout ideas for a mobile expense‑tracker home screen."*
 - *"Recreate the composer UI from this codebase, then export it as standalone HTML."*
+- *"Build a dashboard using our design system, starting from its analytics screen."*
 
 For best results, **give it design context** — a screenshot, a UI kit, a Figma link, or a codebase. Starting from real context is the single biggest lever on quality; the skill will ask for it if you don't provide it.
 

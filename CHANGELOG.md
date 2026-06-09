@@ -6,10 +6,15 @@ All notable changes to `baoyu-design` are tracked in this file.
 
 ### Added
 
+- Added end-to-end design-system support so a design project can follow an existing system: discovery, a sync step that copies a self‑contained, version‑pinned copy into `<project>/_ds/<slug>/`, page wiring, a generated per‑load binding prompt (`_ds_prompt.md`), and the binding recorded in `<project>/_d_meta.json` — documented in the new `use-design-system.md` built‑in skill.
+- Added a portable design-system authoring pipeline: a compiler that bundles a system's tokens and React components for loading, a read-only checker (with a matching checker subagent) that validates a system without writing, and the `design-system-authoring-guide.md` flow.
+- Added asset recording that indexes a project's deliverables and their review status in `_d_meta.json`, bootstrapping that metadata even when no design system is used.
 - Added this changelog to keep project updates in one place.
 
 ### Changed
 
+- Project setup now asks where to save the project and which design system(s) to use (none, one, or several); reopening a project reloads its bound design systems from `_d_meta.json` before designing.
+- Documented importing and using existing design systems in the English and Simplified Chinese README files.
 - Clarified that final design and prototype delivery should include the running preview, not only the generated file.
 - Updated Claude Code, Codex Agent, and Cursor harness references to make final preview handoff visible to the user after verification.
 - Updated the English and Simplified Chinese README files to document Codex Agent support, the new `references/codex.md` harness map, install examples, usage notes, and changelog links.
