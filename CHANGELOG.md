@@ -9,6 +9,7 @@ All notable changes to `baoyu-design` are tracked in this file.
 - Added end-to-end design-system support so a design project can follow an existing system: discovery, a sync step that copies a self‑contained, version‑pinned copy into `<project>/_ds/<slug>/`, page wiring, a generated per‑load binding prompt (`_ds_prompt.md`), and the binding recorded in `<project>/_d_meta.json` — documented in the new `use-design-system.md` built‑in skill.
 - Added a portable design-system authoring pipeline: a compiler that bundles a system's tokens and React components for loading, a read-only checker (with a matching checker subagent) that validates a system without writing, and the `design-system-authoring-guide.md` flow.
 - Added asset recording that indexes a project's deliverables and their review status in `_d_meta.json`, bootstrapping that metadata even when no design system is used.
+- Added a read-only fork-verifier subagent (`agents/fork-verifier-agent.md`) for thorough post-build checks — it loads the served deliverable, catches console errors, screenshots the layout, and probes for overflow root causes and unresolved `var(--*)` tokens before returning a single done / needs-work verdict; the Claude Code, Cursor, and Codex harness references now resolve their `fork_verifier_agent` verification subagent to it.
 - Added this changelog to keep project updates in one place.
 
 ### Changed
