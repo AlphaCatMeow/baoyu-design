@@ -99,3 +99,7 @@ When the deliverable is ready, preview it over the served URL (above), confirm i
 ## MCP tools
 
 Browser preview, screenshots, and DevTools debugging come from MCP servers (`cursor-ide-browser`, `user-chrome-devtools`, `cursor-app-control`), invoked via `CallMcpTool`. **Always read a tool's JSON descriptor before calling it the first time** so you pass the right arguments.
+
+## Design-system checker subagent
+
+Only when **authoring a design system** — the compiler (`compile-design-system.mjs`) and checker (`check-design-system.mjs`) commands and the full flow live in [`design-system-authoring-guide.md`](../built-in-skills/design-system-authoring-guide.md). Both are plain `Shell` `node <skill>/agents/…` calls and run inline. Harness-specific bit: to run the read-only checker as an **isolated subagent**, spawn a **`Task`** subagent with the prompt in [`../agents/design-system-checker.md`](../agents/design-system-checker.md), passing the project directory and this skill's `agents/` path — it only runs `check-design-system.mjs` and relays output; it must not edit files or compile.

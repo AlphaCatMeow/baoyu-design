@@ -3,14 +3,19 @@ name: baoyu-design
 description: >-
   Create polished design artifacts as self-contained HTML — UI mockups, interactive
   prototypes, wireframes, landing pages, dashboards, app screens, mobile apps, and
-  slide decks. Use this skill whenever the user wants to design, mock up, prototype,
-  wireframe, or visualize any interface, screen, flow, or visual artifact — even
-  when they don't say the word "design" (e.g. "build me a landing page", "show me
-  what a settings screen could look like", "prototype an onboarding flow", "wireframe
-  a few layout ideas", "make a pitch deck"). It drives a full design process:
+  slide decks — and set up, import, or author reusable design systems / UI kits. Use
+  this skill whenever the user wants to design, mock up, prototype, wireframe, or
+  visualize any interface, screen, flow, or visual artifact — even when they don't say
+  the word "design" (e.g. "build me a landing page", "show me what a settings screen
+  could look like", "prototype an onboarding flow", "wireframe a few layout ideas",
+  "make a pitch deck"). Also use it to set up a design system, import an existing
+  design system, create a design system or UI kit, or author brand tokens and
+  components (e.g. "set up a design system for our brand", "import this design system",
+  "create a design system", "build a UI kit"). It drives a full design process:
   clarifying questions, design-context gathering, and production of one or more HTML
-  deliverables. Runs on portable agent harnesses including Claude Code, Cursor, and
-  Codex Agent — harness-specific tools are resolved from references/.
+  deliverables — and, for design systems, compiling a loadable component bundle. Runs
+  on portable agent harnesses including Claude Code, Cursor, and Codex Agent —
+  harness-specific tools are resolved from references/.
 ---
 
 # Design
@@ -29,12 +34,14 @@ You are an expert designer producing design artifacts as HTML on the user's beha
 
 **3. Load the right built-in skill(s).** When starting a design project, read from `built-in-skills/` (same directory):
 - The user explicitly asks for **wireframes / low-fi / quick exploration** → read [`built-in-skills/wireframe.md`](built-in-skills/wireframe.md).
+- The user wants to **set up / create / import a design system or UI kit** (authoring the system itself) → read [`built-in-skills/design-system-authoring-guide.md`](built-in-skills/design-system-authoring-guide.md) (the full authoring flow), plus [`built-in-skills/create-design-system.md`](built-in-skills/create-design-system.md) / [`built-in-skills/design-components.md`](built-in-skills/design-components.md) as relevant. Generate the loadable artifacts with `agents/compile-design-system.mjs` and validate with the read-only checker (`agents/check-design-system.mjs`, or the `agents/design-system-checker.md` subagent) — see your harness reference for how to launch it.
+- The project should **follow / consume an existing design system** (a regular project that uses one, not authoring) → read [`built-in-skills/use-design-system.md`](built-in-skills/use-design-system.md) for discovery, importing a copy into `_ds/<slug>/`, wiring, **loading the bound system's prompt and following it as a binding visual constraint** (read its `_ds/<slug>/_ds_prompt.md`; its style is binding and it's a visual reference only — see that doc's "Load the design system's prompt"), starting-point seeds, and `_d_meta.json`.
 - **Otherwise (default)** → read both [`built-in-skills/hi-fi-design.md`](built-in-skills/hi-fi-design.md) **and** [`built-in-skills/interactive-prototype.md`](built-in-skills/interactive-prototype.md).
-- Other output types (deck, mobile app, animation, design system, PDF/PPTX export, etc.) → read the matching file. The full list is at the bottom of `system-prompt.md`.
+- Other output types (deck, mobile app, animation, PDF/PPTX export, etc.) → read the matching file. The full list is at the bottom of `system-prompt.md`.
 
 **4. Ask clarifying questions.** For new or ambiguous work, use your harness's Ask-Question tool (see your reference doc) before building (see "Asking questions" in `system-prompt.md`). Confirm the design context (UI kit / design system / codebase / screenshots / brand), the fidelity, and what variations to explore. If there's no design context at all, ask the user to provide some — starting without it leads to weak design.
 
-**5. Set up the output folder.** Create `designs/<descriptive-project-name>/` in the working directory and write all HTML deliverables + copied assets there. Never scatter design files in the repo root.
+**5. Set up the output folder.** Ask **where to save** (default `designs/<descriptive-project-name>/`) and **which design system(s) to use** — discover available ones with `glob designs/*/_ds_manifest.json` and offer them (multiSelect: none / one / several). Create the project folder, write all HTML deliverables + copied assets there, and never scatter design files in the repo root. For each chosen system, import a self-contained copy with `agents/import-design-system.mjs` (→ `_ds/<slug>/`), record the binding in the project's `_d_meta.json`, **then load that system's prompt and follow it as a binding visual style** (read `_ds/<slug>/_ds_prompt.md`). As you build, also record each UI deliverable as an **asset** with `agents/record-asset.mjs` (this even bootstraps `_d_meta.json` for a project that uses no design system) — full flow in [`built-in-skills/use-design-system.md`](built-in-skills/use-design-system.md). **Resuming an existing project?** If the project folder already exists, read its `_d_meta.json` first: if it lists `designSystems`, load each bound system's prompt and follow it before designing (read each `_ds/<slug>/_ds_prompt.md`; don't re-ask which system to use).
 
 **6. Build, preview, and verify.** Produce the deliverable following `system-prompt.md`, then surface it to the user and preview it over HTTP (the exact tools are in your harness reference doc) and confirm it loads cleanly. Fix any errors before finishing.
 

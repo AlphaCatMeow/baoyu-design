@@ -74,6 +74,10 @@ Codex subagents consume additional context and are not the default for this skil
 
 For normal design work, preview, screenshot, console-check, and debug in the current agent.
 
+## Design-system checker subagent
+
+Only when **authoring a design system** — the compiler (`compile-design-system.mjs`) and checker (`check-design-system.mjs`) commands and the full flow live in [`design-system-authoring-guide.md`](../built-in-skills/design-system-authoring-guide.md). Both are plain shell `node <skill>/agents/…` calls and run inline. Harness-specific bit: run the read-only checker **inline in the current agent** by default; spawn a separate read-only subagent (same prompt, [`../agents/design-system-checker.md`](../agents/design-system-checker.md), passing the project directory and this skill's `agents/` path) only if the user asks and multi-agent tools are available — it only runs `check-design-system.mjs` and relays output; it must not edit files or compile.
+
 ## Codex-specific notes
 
 - In Codex app, the in-app browser is best for localhost and file-backed preview pages that do not require sign-in.
