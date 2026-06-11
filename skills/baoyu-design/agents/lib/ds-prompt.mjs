@@ -39,17 +39,41 @@ export function sampleComponentNames(names, n = 2) {
 }
 
 // First lines of a component's `*.prompt.md` — the one-sentence "what & when"
-// plus the opening of its JSX example — with code fences kept balanced so an
-// open fence can't swallow the rest of the rendered prompt.
-export function extractPromptExcerpt(text, maxLines = 5) {
+// plus its first JSX example as a COMPLETE fenced block (an excerpt cut mid-block
+// would render an empty ```jsx``` fence, which is worse than no example). Blank
+// lines don't count toward maxLines, so a fence that follows the prose is always
+// reached; an overlong block is truncated but re-closed so the fence stays balanced.
+export function extractPromptExcerpt(text, maxLines = 5, maxBlockLines = 14) {
   const lines = String(text ?? '').split(/\r?\n/);
   while (lines.length && !lines[0].trim()) lines.shift();
-  const slice = lines.slice(0, maxLines);
-  while (slice.length && !slice[slice.length - 1].trim()) slice.pop();
-  if (!slice.length) return '';
-  const fences = slice.filter((l) => /^\s*```/.test(l)).length;
-  if (fences % 2 === 1) slice.push('```');
-  return slice.join('\n');
+
+  const out = [];
+  let prose = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) {
+      out.push(line);
+      let used = 0;
+      let closed = false;
+      for (i += 1; i < lines.length; i++) {
+        if (/^\s*```/.test(lines[i])) { out.push(lines[i]); closed = true; break; }
+        if (used >= maxBlockLines) break;
+        out.push(lines[i]); used += 1;
+      }
+      if (!closed) out.push('```');
+      break;
+    }
+    if (!line.trim()) { if (out.length) out.push(line); continue; }
+    if (prose >= maxLines) break;
+    out.push(line); prose += 1;
+  }
+
+  while (out.length && !out[out.length - 1].trim()) out.pop();
+  if (out.length >= 2 && /^\s*```/.test(out[out.length - 1]) && /^\s*```/.test(out[out.length - 2])) {
+    out.pop(); out.pop();
+    while (out.length && !out[out.length - 1].trim()) out.pop();
+  }
+  return out.join('\n');
 }
 
 // one-line type display for non-enum props: collapse whitespace, fold function
