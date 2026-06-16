@@ -3,10 +3,14 @@ name: baoyu-design
 description: >-
   Create polished design artifacts as self-contained HTML: UI mockups, interactive
   prototypes, wireframes, landing pages, dashboards, app screens, mobile apps, slide
-  decks, and visual explorations. Use whenever the user asks to design, mock up,
-  prototype, wireframe, visualize, or explore an interface, product screen, user
-  flow, content layout, visual artifact, or pitch/deck concept, even if they do not
-  say "design". Also use for setting up, importing, or authoring reusable design
+  decks (a.k.a. PPT / PowerPoint presentations), and visual explorations. Use whenever
+  the user asks to design, mock up, prototype, wireframe, visualize, explore, or make a
+  PPT/deck for an interface, product screen, user flow, content layout, visual artifact,
+  or pitch/deck concept, even if they do not say "design". Also use to export a deck
+  built with this skill to PowerPoint (.pptx) when the user asks to export/save/turn a
+  deck into PPT, PPTX, or PowerPoint — note this exports decks authored here (the
+  deck-stage / slide-structured HTML this skill produces), NOT arbitrary HTML files, so
+  confirm the target is such a deck before exporting. Also use for setting up, importing, or authoring reusable design
   systems, UI kits, brand tokens, component libraries, or loadable design-system
   bundles. The skill guides context gathering, clarifying questions, choosing
   fidelity, selecting or binding design systems, creating project folders, building
