@@ -1,80 +1,134 @@
 # Changelog
 
+English | [中文](./CHANGELOG.zh.md)
+
 All notable changes to `baoyu-design` are tracked in this file.
 
-## Unreleased
+## 2026-06-19
 
-### Added
-
-- Added the `generate-images` built-in skill — a single, harness-agnostic dispatcher for image generation that every flow calls instead of re-deriving the rule. It inlines the canonical backend-selection order — current-request override → a saved `preferred_image_backend` → auto-select (Codex native `imagegen` via the `Skill` tool → Cursor native `GenerateImage` → another runtime-native `image_generate` → the installed `baoyu-image-gen` CLI) → else ask — alongside the per-backend invocation recipes, a "generate only when imagery genuinely helps; always offer none/minimal" judgment gate, the hard prompt-file-first rule (write `prompts/NN-{type}-[slug].md` before any backend runs), the never-substitute-SVG/HTML/canvas-for-a-raster rule, and the `imgs/`+`prompts/` output convention. The old provider-specific `gemini-image` built-in skill is removed — its claude.ai-web `generate_image`/Gemini backend doesn't exist in the Claude Code / Codex / Cursor harnesses this skill actually runs in, so it is dropped rather than carried over. The capability is then wired in wherever it earns its place: the `system-prompt.md` skill index lists it and its always-loaded "avoid SVG / use placeholders" craft rule now also routes to it; `make-a-deck.md` points at it (replacing an inlined copy that hard-linked to `baoyu-skills/docs/image-generation-tools.md` and was dead without that repo checked out) while keeping its deck-only style and divide-the-labor judgment; and `mobile-prototype.md` (app-icon generation), `hi-fi-design.md`, `something-cool.md`, `frontend-design.md`, `animated-video.md`, and the Cursor harness reference each gain a one-line pointer. `make-a-doc` and `wireframe` are deliberately left unwired, since restraint is the point of those flows.
-- Added video export for the `animated-video` skill, mirroring the `gen_pptx` pipeline so a finished timeline animation renders to a real `.mp4` (or `.webm`/`.gif`): a new `agents/gen-video/` TypeScript CLI drives a headless Chromium via Playwright, seeks the animation frame-by-frame through a timeline bridge, supersamples at `deviceScaleFactor` 2, and streams PNG frames over `image2pipe` to ffmpeg (libx264 `+faststart` / libvpx-vp9 / palettegen+paletteuse, lanczos downscale) — defaulting to 30 fps and the Stage's own `width`/`height`/`duration`. It takes a JSON config from a file or `--config -` stdin, loads the deck from an `http(s)` URL the caller serves (appending `?capture` to strip chrome), writes to `--out`, and prints one JSON line `{ ok, file, frames, fps, duration, width, height, bytes, flags, warnings }` with non-fatal validation flags (`bridge_missing`, `capture_mode_off`, `fonts_timeout`, `duplicate_frames`, `zero_duration`, `ffmpeg_failed`). The `starter-components/animations.jsx` Stage is now export-ready out of the box: it publishes a stable `window.__animStage` bridge (`setTime`/`setPlaying`/`duration`) and, under `?capture`, starts paused at t=0, drops its scrubber/letterboxing/transitions, and renders full-bleed — so most exports need only the Stage dimensions. A new `built-in-skills/export-as-video.md` documents the inputs and flags; `animated-video.md`, `SKILL.md`, the system-prompt skill index, and `references/claude.md` (a web-tool-map note plus an "Exporting to video" setup/usage section) route to it. The CLI ships as source (the repo-wide `dist` gitignore keeps the bundle out of git, so one-time setup — `npm install && npx playwright install chromium && npm run build`, plus a system `ffmpeg` — builds it), with `node --test` unit coverage for the ffmpeg-arg builder and the validation heuristics. The `duplicate_frames` check only fires when nearly every frame repeats (the signature of unwired seeking), not for the many legitimately-held beats of a well-paced explainer.
-- Added a local `gen_pptx` implementation so PPTX export works in Claude Code, where the claude.ai `gen_pptx` web tool does not exist: a new `agents/gen-pptx/` TypeScript CLI (clean port of the claude.ai tool) drives a headless Chromium via Playwright and emits a `.pptx` with PptxGenJS, supporting both `editable` (native text/shapes) and `screenshots` (full-bleed PNG) modes. It takes the exact input object the export docs already define — read from a JSON file or `--config -` stdin — serves no web host (the deck is loaded from an `http(s)` URL the caller serves, since `file://` breaks deck-stage and multi-file decks), writes the file to `--out`, and prints one JSON line `{ ok, file, slides, bytes, flags, warnings, speakerNotes }` with the same validation diagnostics (`duplicate_adjacent`, `slide_size_mismatch`, `no_speaker_notes`, …) the docs describe. Both `export-as-pptx-editable.md` and `export-as-pptx-screenshots.md` gain a Claude Code callout at their "Call `gen_pptx`" step, and `references/claude.md` adds a `gen_pptx` row to the web-tool→Claude-Code map plus an "Exporting to PPTX" section covering one-time setup (`npm install && npx playwright install chromium && npm run build`) and the per-export invocation. The CLI ships as source (the repo-wide `dist` gitignore keeps the bundle out of git, so setup builds it), with `node --test` unit coverage for the CSS/color/unit/font helpers. The skill's gating `description` now carries the PPT/PowerPoint/PPTX make-and-export trigger words (so "做个PPT" / "export to PowerPoint" routes here), scoped with the precondition that export only handles decks this skill builds; both export docs gain a "decks only, not any HTML" precondition note so an arbitrary HTML page isn't fed to the exporter as if it were a slide deck.
-- The `deck-stage.js` starter component now auto-hides the thumbnail rail when the deck enters native fullscreen via the Fullscreen API (`element.requestFullscreen()`, as a "present" button would): an independent `_fullscreen` flag — kept separate from host-driven presenting so the two paths can't clobber each other — listens for `fullscreenchange`, hard-hides the rail and its resize handle (`display:none`), and re-fits the canvas to fill the viewport; exiting fullscreen restores the rail. The browser's own F11 fullscreen does not fire `fullscreenchange`, so it is unaffected. The local edit is recorded in `starter-components/deck-stage-patch.md` so it can be reapplied after a Claude Design upgrade overwrites the component.
-- The `deck-stage.js` overlay toolbar gains a **fullscreen toggle button and an `F` shortcut**: clicking the button (a corners-out/corners-in icon that swaps with state) or pressing `F` calls `requestFullscreen()`/`exitFullscreen()` on the document, reusing the rail-hide above; the button reflects state via a `data-fullscreen` host attribute and a state-aware `aria-label`/`title`. Modifier combos bail out of the key handler first, so `Cmd/Ctrl+F` still opens the browser's Find. Recorded as Patch 2 in `starter-components/deck-stage-patch.md`.
-- `tweaks-panel.jsx` gains a `<TweakSuggestionBar>` component: a suggestion input that typewriter-cycles through three edit-mode tweak ideas, where picking one, typing a custom tweak, or clicking "Ideas" drops the text into the host chat composer (via the `__edit_mode_chat` postMessage) for the user to send as a new turn. `low-level-tweaks-api.md` / `tweaks-protocol.md` now document it as the wrapper authors should reach for instead of wiring the chat-post protocol by hand.
-- The deck-stage thumbnail rail's right-click menu gains a **Duplicate slide** action.
-- Added the `make-a-doc` built-in skill: guidance for page-style, print-first documents (resumes, one-pagers, memos, letters, reports) — an 816px paper page on a muted desk background on screen, plus `@media print` / `@page` rules (outer margins, `break-inside`/`break-after`, selective `print-color-adjust`) so the browser's Print produces a clean document with zero tweaking.
-- Added the `something-cool` built-in skill: the opt-in "Show me something cool" flow asks the user a single `AskUserQuestion` up front (4–5 concrete directions plus a "Decide for me" path) before building the most polished, motion- and interaction-forward piece it can. `SKILL.md` and `system-prompt.md` route both new skills (documents vs. the default hi-fi/interactive flow, and explicit "show me something cool" requests).
-- Design-system models now carry per-component prop contracts parsed from each component's `.d.ts` (`parseDtsInterfaces` in `agents/lib/ds-core.mjs`): every interface in the file is read (a component resolves `<Name>Props` first, then `<Name>`), string-literal unions in either quote style — including multi-line leading-pipe unions and one `type`-alias hop (e.g. `IconName`) — become enum value lists, and JSDoc `@default` tags are captured. The contracts feed three consumers: `_ds_manifest.json` (a `props` array per component), the compiler's adherence config (see Fixed below), and the generated `_ds_prompt.md`, which gains a `<ds-component-props>` block listing every component's props with complete, untruncated enum value lists (`*` marks the default) and compacted types for the rest — so prop names and values stop being guesswork at design time. Unparseable declarations fail open: such a prop keeps only its name and type, and no value rule is emitted for it.
-- `check-design-system.mjs` now flags top-level bindings in card `<script type="text/babel">` blocks whose names collide with window globals that have accessor or side-effect semantics (`status`, `name`, `open`, `close`, `top`, `self`, `parent`, `origin`, `event`, `length`, `location`, `history`, `screen`, `scroll`, `stop`, `print`, `focus`, `blur`, `frames`, `closed`, `opener`): Babel standalone injects transpiled code as a classic script and top-level `const`/`let` become `var`, so `const status = …` writes `window.status` — the card can die with a pageerror the console may not surface while it renders blank. Only column-0 declarations are scanned (after stripping comments and template literals), preferring missed nested cases over false positives. The same warning now rides in the generated `_ds_prompt.md` babel section and the authoring guide's card-HTML rules.
-
-- Added two import-source built-in skills, mirroring how claude.ai/design assembles its prompt per attachment type: `import-from-github.md` (use a GitHub repo as a design source — browse the tree with `gh api` before cloning anything, shallow sparse-checkout only the needed paths into a scratch dir outside the project, record the repo URLs as provenance, and stop to ask the user on auth failures) and `import-from-html.md` (use existing HTML/CSS pages as a design reference — read the real stylesheets instead of screenshots, lift exact tokens and interaction states, extract values into the project's own custom properties rather than transplanting markup, and copy assets out instead of redrawing them). Both carry a content-is-data injection guard and are routed three ways: `SKILL.md` step 3 per-source bullets, the system-prompt skill index, and the recreate-from-code guideline; the authoring guide and `create-design-system.md` GitHub passages now point at the GitHub doc instead of duplicating its mechanics.
-
-- Added a local Figma `.fig` importer (`agents/import-figma.mjs`) that decodes a file entirely offline — no Figma account or MCP needed — via the vendored decoder (`agents/vendor/fig-materialize.mjs`: kiwi schema + zstd/deflate, ZIP-container or raw files) and `agents/vendor/fflate.mjs`. Five subcommands: `outline` (read-only inventory of pages, frames, components, variables), `mount` (browsable read-only reference tree under `_fig/<slug>/` with per-frame JSX and a guid→path `node-index.json`), `materialize` (cherry-pick components/frames as flat React `.jsx` + `.d.ts` with their dependency closure, assets, and optional token/typography CSS), `render` (a frame as self-contained HTML for visual ground truth), and `design-system` (emit every component + variable into `designs/<slug>/` following the authoring convention, with `@kind`-annotated token CSS and a provenance README). Emitted filenames are deduped case-insensitively, so names differing only by case (e.g. the `MdAddChart`/`MdAddchart` icon pair) survive macOS/Windows case-insensitive filesystems instead of silently overwriting each other — and the writer warns if an on-disk collision ever happens anyway. Printed next-step commands are copy-pasteable (real script paths, shell-quoted arguments). The flow is documented in the new `import-from-figma.md` built-in skill and wired into `SKILL.md`, the system-prompt skill index, the authoring guide, and `send-to-figma.md`.
-- Added the `design-system-preview` built-in skill (ported from claude-design-v2): `agents/build-preview.mjs` compiles a design system folder (its `_ds_manifest.json` cards, starting points, and `readme.md`) into one self-contained interactive `preview.html` — outline nav, rendered Readme, and scaled live cards isolated via declarative Shadow DOM, no iframes. Authoring flows (`design-system-authoring-guide.md`, `create-design-system.md`) now end by generating `preview.html` into the design-system directory, and it is documented as a generated artifact alongside `_ds_bundle.js`/`_ds_manifest.json`. React/ReactDOM UMDs are vendored into `agents/vendor/` so the default build is offline.
-- Added end-to-end design-system support so a design project can follow an existing system: discovery, a sync step that copies a self‑contained, version‑pinned copy into `<project>/_ds/<slug>/`, page wiring, a generated per‑load binding prompt (`_ds_prompt.md`), and the binding recorded in `<project>/_d_meta.json` — documented in the new `use-design-system.md` built‑in skill.
-- Added a portable design-system authoring pipeline: a compiler that bundles a system's tokens and React components for loading, a read-only checker (with a matching checker subagent) that validates a system without writing, and the `design-system-authoring-guide.md` flow.
-- Added asset recording that indexes a project's deliverables and their review status in `_d_meta.json`, bootstrapping that metadata even when no design system is used.
-- Added a read-only fork-verifier subagent (`agents/fork-verifier-agent.md`) for thorough post-build checks — it loads the served deliverable, catches console errors, screenshots the layout, and probes for overflow root causes and unresolved `var(--*)` tokens before returning a single done / needs-work verdict; the Claude Code, Cursor, and Codex harness references now resolve their `fork_verifier_agent` verification subagent to it.
-- Added this changelog to keep project updates in one place.
+### Features
+- `generate-images`: add a harness-agnostic image-generation dispatcher and wire it into the design flows that need raster output. The dispatcher records prompt files before generation, chooses runtime-native providers before the installed `baoyu-image-gen` CLI, standardizes `imgs/` + `prompts/` outputs, and removes the obsolete `gemini-image` built-in skill.
 
 ### Changed
+- PPTX export now defaults to editable mode; screenshot export remains available when explicitly requested.
 
-- PPTX export now defaults to **editable** mode: `SKILL.md`'s output-type routing, both export docs (`export-as-pptx-editable.md` gains a "default PPTX export" callout, `export-as-pptx-screenshots.md` a "not the default" one that cross-links back), and `references/claude.md`'s "Exporting to PPTX" section now steer to the native-text/shape export unless the user explicitly asks for pixel-perfect, non-editable image slides (`"mode":"screenshots"`).
-- The deck-stage thumbnail rail moved to a **host-driven `dc-op` model**: rail mutations (skip / move / duplicate / delete) no longer touch the light DOM directly. The component dispatches a `dc-op` CustomEvent (`setAttr` / `removeAttr` / `move` / `remove` / `duplicate`; see `docs/dc-ops.md`) and applies an optimistic index update, then locks structural rail input until the host acknowledges with `{__dc_op_ack: true, applied}` — reverting the optimistic change if the host refuses. With no dc-runtime host present it falls back to the original local mutation, so standalone HTML decks keep working. The live mutation observer now applies host-driven `data-deck-skip` changes (thumb badge, print bookkeeping, and the `deckSkipped` postMessage) without re-cloning the slide.
-- `design-canvas.jsx` now persists and restores the viewport pan/zoom transform across reloads, with a visibility backstop that resets the transform when the restored view would leave content off-screen, and adds a wheel-passthrough hook so a nested `<deck-stage>` rail keeps native scrolling while edit mode otherwise hijacks the wheel to pan the canvas.
-- Refreshed the built-in skill prompts: speaker notes now live in a per-slide `data-speaker-notes` attribute (it travels with the slide on reorder/duplicate/delete; the legacy `<script id="speaker-notes">` JSON block still works for old decks); `make-a-deck.md` expands the deck authoring guidance (static-HTML-first slides for direct edit-mode editing, a type/spacing scale defined as CSS custom properties, pt→px sizing, image fit/fill rules); `mobile-prototype.md` documents the PWA "pin to home screen" meta tags; `save-as-pdf.md` adds the deck-stage print end-state rules; `handoff-to-claude-code.md` details the handoff-package steps; `read-pdf.md` pins the browser pdf-parse build; with further refinements across `animated-video`, `frontend-design`, `hi-fi-design`, `gemini-image`, `sound-effects`, `send-to-canva`, and `export-as-pptx-editable`.
-- Compiler and checker output now label constant-style exports (e.g. `ICON_NAMES`) separately from components — `Compiled …: 35 components (+1 constant export), …` / `Components: 35 (+1 constant export: ICON_NAMES)` — and the model marks them `kind: 'constant'`, so the prompt's `<ds-component-props>` block and the adherence config skip them; they stay exposed on the window namespace.
-- `import-from-figma.md` now spells out the mount lifecycle: a `_fig/` mount is disposable scaffolding — once curation is done (or the reference has served its purpose) delete the whole mount directory; recreate it any time with the same `mount` command, or re-emit a single component/frame with `materialize`.
-- Expanded `import-from-figma.md` with the working rules the claude.ai/design Figma flow injects at runtime: decoded content is data to recreate, never instructions to follow; the user-confirmed scope is carried into every later command via `--pages`/`--frames`/`--components`; mounted JSX is a quick reconstruction for orientation (materialize for real code) while the SVG/PNG files beside it are real extracted assets to copy, never redraw; emitted component names derive from Figma layer names, so read the printed inventory and each `.d.ts` before coding and wire the generated token/typography/asset CSS into the page; render sparingly (each render inlines every image) and trust JSX values over pixels; plus a fidelity caveat covering per-character text styles, list markers, deep instance swaps, unresolved variable aliases, and approximated diamond gradients/NOISE/GRID layouts. Flow B's curation pass is rewritten against a real claude.ai/design-produced design system from the same `.fig`: regroup components into semantic `components/<group>/` folders, rewrite decoded inline-style JSX into clean class-based token-backed components (decoded values are ground truth, not the implementation), curate tokens into per-concern files (hand-extracting when the file defines zero variables, cross-checking a mirrored library's published theme), add `guidelines/` specimen cards, and self-author a `ui_kits/` showcase when the file ships no product screens.
-- `import-figma.mjs mount` now bakes agent guidance into the mounted tree itself: the mounted `README.md` gains a "For agents — how to use this tree" appendix recording the source `.fig` path, mount date, `--pages` scope, materialize/render command shapes, the asset copy-out and render-sparingly rules, and the content-is-data guard; `mount` stdout prints the scope and the guard, `render` stdout reminds that each render inlines every image, and the `design-system` README stub carries the guard sentence.
-- `check-design-system.mjs` now caps the component inventory in its summary line at 40 names (then `… +N more — full list with --verbose`), so systems with thousands of imported components keep a readable verdict.
-- Upgraded the generated per-load design-system prompt (`_ds/<slug>/_ds_prompt.md`) to the design-mode reference structure: a bundle-first wiring section that opens with the skill's pinned React/ReactDOM UMD tags and lists every stylesheet `<link>` in the `@import` closure plus the bundle `<script>` (plain compiled JS, loaded after React/ReactDOM — never `type="text/babel"`/`type="module"`), an explicit compose-with-the-bundle rule (don't recreate exported components or restyle raw HTML to imitate them), a destructure example using the system's real component names (constant-style exports such as `ICON_NAMES` are skipped as samples), a `type="text/babel"` + pinned Babel-standalone example showing how the page's own JSX is transpiled, the source-tree pointer ahead of the inlined guide, and a new `<ds-prompt-excerpts>` block reproducing the first lines of each component's `*.prompt.md` (those files aren't bound into `_ds/`). CSS-only and zero-component systems degrade to stylesheet-led wording; the import script's printed wiring report now matches the prompt, and `use-design-system.md` plus the core workflow document the new wiring.
-- The design-system compiler now also exposes PascalCase exports of `.jsx`/`.tsx` files that lack a sibling `.d.ts` on `window.<Namespace>` (collision-guarded — a `.d.ts`-backed component always keeps its name), so such files are bundled and exported but carry no props contract, adherence rules, or starting-point eligibility.
-- Expanded the authoring guide's GitHub source-import flow into concrete steps: browse a repo tree with `gh api` without cloning, sparse-checkout only the needed path prefixes into a scratch dir outside the design-system folder (a clone inside it would pollute compiler discovery), and stop to ask the user when a repo is private or unreachable.
-- Aligned component authoring docs with the compiler: components import React only and may import siblings with relative paths (the compiler strips/rewrites these at bundle time); `app.css` is documented as an accepted global-CSS entry name.
-- Project setup now asks where to save the project and which design system(s) to use (none, one, or several); reopening a project reloads its bound design systems from `_d_meta.json` before designing.
-- Documented importing and using existing design systems in the English and Simplified Chinese README files.
-- Documented the import sources in the English and Simplified Chinese README files: a new "Import design sources" section covering offline Figma `.fig` decoding, GitHub repos as design sources, and existing HTML/CSS as a reference, illustrated with a screenshot of the `preview.html` compiled from the community Chakra UI Figma Kit (`assets/screenshots/figma-import-chakra-preview.webp`); the skills table gains an import row plus the design-system entries (use / preview), an import example prompt was added, and the stale built-in skill count was replaced with uncounted phrasing.
-- Clarified that final design and prototype delivery should include the running preview, not only the generated file.
-- Updated Claude Code, Codex Agent, and Cursor harness references to make final preview handoff visible to the user after verification.
-- Updated the English and Simplified Chinese README files to document Codex Agent support, the new `references/codex.md` harness map, install examples, usage notes, and changelog links.
+### Fixes
+- `make-a-deck`: document that each slide's content wrapper must fill its `<section>`. deck-stage sizes only the section (via `::slotted`), not the wrapper inside it, so a wrapper whose children are all absolutely positioned collapses to zero height — dropping full-bleed images entirely on export, or rendering hero backgrounds at half height. Adds a base CSS rule (`section[data-label] > *`), the mechanism behind it, and a verification check.
+- `gen-pptx` / `gen-video`: preserve Unicode characters (CJK, Cyrillic, accented Latin) in export filenames via a shared `safeBasename` sanitizer, instead of replacing every non-ASCII word character with `_` (which turned names like `小米SU7-外观与价格` into all underscores).
 
-### Fixed
+## 2026-06-16
 
-- deck-stage print no longer captures slides mid-entrance: `beforeprint`/`afterprint` handlers set `data-deck-active` on every slide and force animations/transitions to their end state during print (paired with the `@media print` sheet), so `[data-deck-active]`-gated entrance styles resolve on every printed page instead of freezing at their hidden base.
-- The design-system compiler emitted zero enum value rules into `_adherence.oxlintrc.json`: its old `.d.ts` reader matched only single-quoted literal unions while emitted `.d.ts` files use double quotes, it read only the first interface in a file — so components whose `.d.ts` leads with an item type (`Tabs`, `Accordion`, `Breadcrumb`, `Table`) got no prop-name whitelist at all — and it pasted `children` twice into every whitelist regex. All three fall away with the shared parser above; the Chakra UI system now compiles 42 `must be one of` value rules (literal JSX attribute values only — expression values are not linted).
-- The `.fig` decoder's JSX emitter no longer decodes Semi Bold text as `fontWeight: 700`: `textStyleProps` in `agents/vendor/fig-materialize.mjs` tested `/bold/i` before `/semi/i` (an ordering bug inherited verbatim from the upstream claude.ai bundle), so "Semi Bold" matched bold first — e.g. every Inter Semi Bold label in the community Chakra UI Figma Kit mounted as 700. The same chain also mapped Extra/Ultra Bold to 700 and ignored Thin, Extra Light, and Black/Heavy outright. The emitter now reuses the decoder's ordered `FONT_WEIGHT_PATTERNS` table (thin 100, extra/ultra light 200, semi/demi bold 600, extra/ultra bold 800, light 300, medium 500, bold 700, black/heavy 900 — the same table `styleOverrideCss` already used), bringing mounted/materialized JSX in line with the always-correct `render` CSS path. Existing `_fig/` mounts predate the fix; re-run `mount` to refresh them.
-- `preview.html` no longer shows broken images when card *scripts* reference project files: static `src`/`poster`/`href` attributes in card markup were already inlined, but the same references inside scripts — JSX attributes (`<img src="../../assets/x.jpg">`) and bare string literals used via expressions (`const PHOTO = "../../assets/x.jpg"` … `src={PHOTO}`) — survived re-rooting verbatim, resolved against the preview.html location, and 404'd over both HTTP and `file://`. Script code now runs through the same asset inliner (attribute form, plus a conservative quoted-string form that requires a `./`, `../`, or `/` prefix and an asset extension, and only rewrites when the file actually inlines). Scheme-prefixed refs (`mailto:`, `tel:`, …) are skipped instead of warned about as missing assets.
-- Fixed the design-system compiler emitting bundle source blocks in alphabetical order: the bundle rewrites relative imports into eager destructuring, so a component whose local dependency sorted later (e.g. `Button` importing `Icon`) read `undefined` at load time. Blocks are now emitted in dependency-safe DFS post-order, with the old alphabetical order kept as a stable tie-break (cycles fall back to it).
-- `build-preview.mjs` no longer prints the same "no usable manifest" line for two different situations: a missing manifest now says to run `compile-design-system.mjs` first, while a manifest with no cards, starting points, or templates says exactly that — both before falling back to the `@dsCard` file scan.
-- Fixed the compiler's token extraction mis-reading BEM-with-pseudo-class CSS rules (e.g. `.s2-btn--primary:hover { … }`) as custom-property declarations, which produced phantom tokens like `--primary` in `_ds_manifest.json`; declaration matches whose value contains a brace are now skipped (`agents/lib/ds-core.mjs`).
-- The generated `preview.html` now forces `color-scheme: light` on the page and on every card host, so design systems using `light-dark()` tokens render light inside the light pane chrome instead of following the viewer's OS dark mode (explicitly dark subtrees still render dark; systems keyed off `prefers-color-scheme` media queries remain a documented limit).
-- Card previews in `preview.html` no longer show scrollbars when content overflows the declared viewport — overflow stays scrollable but the scrollbar chrome is hidden via a base stylesheet injected into each card's shadow root.
-- Card previews in `preview.html` no longer clip content taller than the declared viewport: the declared height now acts as a minimum and each card grows to its measured content height (re-measured as React commits, fetches resolve, images decode, and fonts load, with a monotonic guard and a 4000px cap so container-relative content can't ratchet the height forever). The card root also sizes as `border-box`, keeping body padding inside the declared viewport like a real page.
-- Tall cards in `preview.html` no longer show a white band inside the right edge of their frame: card scaling is now width-only (`scale = min(containerWidth/designW, 1)`) instead of also clamping to a 500px max height — the height clamp shrank grown cards below the frame width, exposing the frame's white background — and the frame now shrink-wraps the scaled stage. The `--max-height` flag is gone with the clamp.
-- Relative `fetch()` URLs in card scripts are now rebased to the card's source directory (cards are re-rooted into the single preview file), and when any card fetches, the project's small asset files (svg/png/json/… capped at 3 MB total) are inlined and served from memory — fixing icon/JSON fetches both over HTTP and file://, where they previously 404'd or were CORS-blocked.
+### Features
+- `animated-video`: add a local `gen-video` CLI for MP4/WebM/GIF export. It drives Chromium with Playwright, seeks timeline animations frame by frame through `window.__animStage`, supersamples captures, and streams frames to ffmpeg.
+- `starter-components/animations.jsx`: add the `window.__animStage` timeline bridge and `?capture` behavior so exported animations start paused, render full-bleed, and omit editing chrome.
+
+### Fixes
+- `gen-pptx`: guard setup and capture calls with per-call timeouts so a stuck slide cannot hang export forever.
+- `gen-pptx`: preserve code-block line breaks and `<br>` elements in editable PPTX text export.
+
+### Documentation
+- README: document the deck/PPTX export workflow and add English/Chinese pipeline diagrams.
+
+## 2026-06-15
+
+### Features
+- `gen-pptx`: add a local PPTX exporter for Claude Code. The TypeScript CLI uses Playwright and PptxGenJS to export baoyu-design decks in editable or screenshot mode and prints structured validation output.
+- `deck-stage`: add native fullscreen support, auto-hide the thumbnail rail in Fullscreen API mode, add a fullscreen toolbar button plus `F` shortcut, and add a Duplicate slide action.
+- `deck-stage`: move rail mutations to a host-driven `dc-op` model while preserving standalone HTML fallback behavior.
+- `make-a-doc`: add a built-in skill for page-style, print-first documents.
+- `something-cool`: add the opt-in "show me something cool" flow with an upfront direction picker.
+- `tweaks-panel`: add `TweakSuggestionBar` so edit-mode tweak ideas can be dropped into the host chat composer.
+
+### Changed
+- Built-in skill prompts were refreshed across deck authoring, speaker notes, mobile prototypes, print/PDF export, handoff, PDF reading, visual design, animation, sound, Canva, and PPTX export flows.
+- `design-canvas`: persist and restore viewport pan/zoom, with a visibility backstop and wheel passthrough for nested deck rails.
+- `SKILL.md`: add PPT/PPTX/PowerPoint routing terms, scope PPTX export to baoyu-design decks only, and trim the skill description under the runtime description limit.
+
+### Fixes
+- `deck-stage`: force slide animations and transitions to their end state during print/PDF export so entrance states are not captured mid-animation.
+
+## 2026-06-11
+
+### Features
+- Add `import-from-github` and `import-from-html` built-in skills for treating repositories and existing HTML/CSS pages as design sources with provenance and content-is-data guardrails.
+- Design-system tooling now parses component prop contracts from `.d.ts` files, emits complete enum/default prop guidance into `_ds_prompt.md`, and detects risky top-level Babel globals such as `status`, `open`, and `location`.
+- Add a GitHub Actions test workflow and Node test coverage for the design-system, Figma import, preview, asset, and prompt tooling.
+
+### Fixes
+- `build-preview.mjs`: inline assets referenced from card scripts and JSX string literals so generated `preview.html` files no longer show broken images for script-side asset refs.
+- `fig-materialize.mjs`: map font weights with the ordered decoder table so Semi Bold, Extra Bold, Thin, and related weights materialize correctly.
+- `ds-prompt.mjs`: keep fenced JSX examples complete when extracting component prompt excerpts.
+
+### Documentation
+- README: add an "Import design sources" section covering offline Figma `.fig` files, GitHub repositories, and existing HTML/CSS references.
+
+## 2026-06-10
+
+### Features
+- Add a local offline Figma `.fig` importer with `outline`, `mount`, `materialize`, `render`, and `design-system` subcommands.
+- Add the `design-system-preview` built-in skill and `agents/build-preview.mjs`, generating a self-contained interactive `preview.html` for compiled design systems.
+
+### Changed
+- `.fig` importer output now prints copy-pasteable next-step commands, warns about case-insensitive filename collisions, and records mount/render guidance in generated README files.
+- Design-system preview summaries are capped for very large systems so validation output stays readable.
+
+### Fixes
+- Design-system bundles now emit sources in dependency-safe order so local component dependencies are defined before consumers load.
+- Token extraction no longer misreads BEM pseudo-class selectors as custom-property declarations.
+- Preview fallback messages now distinguish a missing manifest from a manifest with no usable preview entries.
+
+## 2026-06-09
+
+### Features
+- Add end-to-end design-system support: discovery, project binding, `_ds/<slug>/` sync, generated per-load `_ds_prompt.md`, and project metadata recorded in `_d_meta.json`.
+- Add the read-only fork-verifier subagent for post-build checks across Claude Code, Codex, and Cursor harnesses.
+- Design-system prompts now use bundle-first wiring, include component prompt excerpts, and expose PascalCase `.jsx`/`.tsx` exports without `.d.ts` contracts when safe.
+
+### Changed
+- Expand design-system authoring guidance for GitHub source import, component imports, accepted global CSS entry names, and runtime wiring.
+- Shorten the `baoyu-design` skill description while preserving trigger terms (by @easonshen90, [#8](https://github.com/JimLiu/baoyu-design/pull/8)).
+
+### Credits
+- `baoyu-design` skill description shortening contributed by @easonshen90 ([#8](https://github.com/JimLiu/baoyu-design/pull/8)).
+
+## 2026-06-08
+
+### Features
+- Add the portable design-system authoring toolchain: compiler, checker, core parser, vendored Babel runtime, and a read-only checker subagent.
+- Add design-system consumer import/sync tooling, including `_ds/<slug>/` bindings, generated per-load prompts, and `_d_meta.json` project metadata.
+- Add asset recording tooling for tracking generated deliverables, versions, status, viewport, subtitles, and sections.
+
+### Changed
+- Harness references now point to the shared design-system authoring guide and clarify when to run checks inline versus through an isolated read-only subagent.
+
+### Fixes
+- Remove the tracked `skills/baoyu-design/.DS_Store` file (by @HCS9527, [#2](https://github.com/JimLiu/baoyu-design/pull/2)).
+
+### Credits
+- Tracked `.DS_Store` removal contributed by @HCS9527 ([#2](https://github.com/JimLiu/baoyu-design/pull/2)).
+
+## 2026-06-07
+
+### Fixes
+- `SKILL.md`: fix frontmatter metadata so the skill loads correctly (by @y122972, [#1](https://github.com/JimLiu/baoyu-design/pull/1)).
+- Remove the root `.DS_Store` file and add `.DS_Store` to `.gitignore`.
+- Correct README screenshot file mappings.
+
+### Documentation
+- Add screenshots to the English and Chinese READMEs, document Reader Mac App prompts and Claude Design comparison examples, and optimize screenshot assets to WebP.
+
+### Credits
+- `SKILL.md` frontmatter fix contributed by @y122972 ([#1](https://github.com/JimLiu/baoyu-design/pull/1)).
 
 ## 2026-06-06
 
-### Added
+### Features
+- Add the portable `baoyu-design` Agent Skill with core design methodology, built-in skill prompts, starter components, export/handoff flows, and Claude Code/Cursor harness references.
+- Add Codex Agent support with `skills/baoyu-design/references/codex.md`, covering question asking, browser preview, screenshots, debugging, deliverable surfacing, and subagent verification defaults.
 
-- Added Codex Agent support with `skills/baoyu-design/references/codex.md`, covering question asking, browser preview, screenshots, debugging, deliverable surfacing, and subagent verification defaults.
-- Added English and Simplified Chinese README files.
-- Added the portable `baoyu-design` Agent Skill, core design methodology, built-in skill prompts, starter components, and harness reference docs for Claude Code and Cursor.
-- Added the initial repository files and MIT license.
+### Documentation
+- Add English and Simplified Chinese README files.
+- Add this changelog and clarify that final design/prototype delivery should surface the running preview, not only generated files.
 
-### Changed
-
-- Updated the skill entry flow to detect Codex Agent and fall back cleanly for Claude Desktop-like or other file-capable harnesses.
-- Reworded preview and verification instructions in built-in export skills so they route through the selected harness reference instead of hard-coded preview tool names.
+### Chore
+- Add initial repository files and MIT license.

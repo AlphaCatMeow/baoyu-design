@@ -2,7 +2,7 @@
 
 **在你自己的本地 Agent 上运行 Claude Design —— Cursor、Claude Code、Claude Desktop，或任何能读写文件的编码 Agent。**
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [更新日志](CHANGELOG.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · [更新日志](CHANGELOG.zh.md)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Best with Opus 4.8](https://img.shields.io/badge/Best%20with-Opus%204.8-d97757) ![Harness](https://img.shields.io/badge/Cursor%20%C2%B7%20Claude%20Code%20%C2%B7%20Codex-supported-1f6feb)
 
