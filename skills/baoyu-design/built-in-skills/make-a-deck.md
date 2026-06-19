@@ -33,6 +33,15 @@ Parallelism is important: section header slides should look the same; repeated t
 
 The deck-stage component absolutely positions every slotted child for you — do NOT set position/inset/width/height on the slide `<section>` elements yourself.
 
+## Illustrations & infographics (generate them when they'll help)
+
+Decks are visual. Beyond user-provided images and design-system assets, you can **generate** original illustrations and infographics — and often should when content would land better as a picture. For backend detection, invocation, the prompt-file rule, and the no-SVG hard rule, follow [`generate-images.md`](generate-images.md) (read it once).
+
+Deck specifics:
+- **Offer a style in your opening round** — only when the deck would benefit (conceptual metaphors, hero/section art, a mascot to thread through, data better as an infographic). Recommend a direction from the source material + chosen aesthetic; always offer "none / minimal". Skip the question for dense data decks or terse internal reviews.
+- **Divide the labor:** tables, quadrants, flows, labeled diagrams, exact numbers → clean HTML/CSS; reserve generation for conceptual scenes, mascots/characters, hero/section art, and genuine infographics. Keep one shared style block so the look stays consistent across slides.
+- **Output:** save into the deck's own `imgs/` folder; place on white/contrasting areas; verify each one loaded.
+
 # Slide writing guidelines
 
 In general, the titles of a slide deck alone should tell you the overall story/content of the deck (similar to ToC in a book)
@@ -50,7 +59,7 @@ Avoid these common Claude-isms that gives away that the deck was AI-generated:
 
 In addition to your normal planning, make sure to do these things:
 
-1. Ask questions if you don't know audience, desired brand, and duration.
+1. Ask questions if you don't know audience, desired brand, and duration — and, when imagery would help and a backend is available, whether/what-style of illustrations to add (see *Illustrations & infographics*).
 2. Write out the full title sequence. Choose ONE grammatical style (for example, short topic noun-phrases or brief declarative sentences) that is appropriate for the content, and write every title in that style. Read them back to yourself and determine if a person reading ONLY the titles could follow the flow of the presentation. The titles should be like chapters in a book - they orient the reader on what to expect with straightforward language. Review the titles and revise as needed. Put these in an scratchpad.md file.
 3. Define your type scale and spacing as CSS custom properties in a `<style>` block in `<head>` before writing any slide — these commit you to projection-appropriate sizing and stop you defaulting to web density. At 1920×1080 a reasonable starting scale is `:root { --type-title: 64px; --type-subtitle: 44px; --type-body: 34px; --type-small: 28px; --pad-top: 100px; --pad-bottom: 80px; --pad-x: 100px; --gap-title: 52px; --gap-item: 28px; }`. At 1280×720, scale by ~0.67. Reference these everywhere — every font-size uses a `--type-*` variable, every padding/gap uses a `--pad-*` or `--gap-*` variable, via `var(…)` in inline styles or class rules. Keeping these as CSS (not JS constants) means the user can change one number — in the style block directly, or via a Tweaks slider bound to the same variable — to re-size the whole deck, and the slide markup stays static HTML with no script needed to compute sizes. The explicit `--pad-bottom` reserves breathing room at the base of every slide; that space is structural, not empty. Web defaults (14-16px body, 48-72px padding) are too small for slides; if the values don't feel generous, they aren't. Your validator will throw an error if you use a size smaller than 24px.
 4. Build the slides, remembering that each slide is an exercise in both design and copywriting. Give each slide the attention it deserves in terms of the layout, the text content, and the tone. Follow the principles below and ensure that each slide can stand alone; a person looking at that slide should be able to understand its high-level meaning without other context.
