@@ -15,6 +15,7 @@ All notable changes to `baoyu-design` are tracked in this file.
 ### Fixes
 - `make-a-deck`: document that each slide's content wrapper must fill its `<section>`. deck-stage sizes only the section (via `::slotted`), not the wrapper inside it, so a wrapper whose children are all absolutely positioned collapses to zero height — dropping full-bleed images entirely on export, or rendering hero backgrounds at half height. Adds a base CSS rule (`section[data-label] > *`), the mechanism behind it, and a verification check.
 - `gen-pptx` / `gen-video`: preserve Unicode characters (CJK, Cyrillic, accented Latin) in export filenames via a shared `safeBasename` sanitizer, instead of replacing every non-ASCII word character with `_` (which turned names like `小米SU7-外观与价格` into all underscores).
+- `gen-pptx`: rasterize CSS gradient backgrounds (cover/hero scrims, fade overlays) to transparent PNGs in editable PPTX export. PowerPoint has no gradient fill, so the converter previously flattened a gradient to its first color stop — turning an alpha-fading scrim like `linear-gradient(105deg, rgba(8,10,13,.92) → .05)` into a near-opaque dark rectangle that uniformly dimmed the whole image and hid the bright subject under the fade. The exporter now paints the gradient onto a canvas honoring each stop's alpha (linear + radial, angle / `to`-direction / corner, %/px stops, border-radius clipping), so overlays fade exactly as in the browser; unsupported forms (conic / repeating) fall back to the prior flat fill.
 
 ## 2026-06-16
 
