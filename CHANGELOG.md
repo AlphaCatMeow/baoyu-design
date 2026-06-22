@@ -4,6 +4,11 @@ English | [中文](./CHANGELOG.zh.md)
 
 All notable changes to `baoyu-design` are tracked in this file.
 
+## 1.1.1 - 2026-06-22
+
+### Changed
+- `make-a-deck`: clarify that text-capable image generation is not a reason to prefer it — HTML/CSS stays the default for structured and precise slide content, and generated imagery remains a supplement reserved for conceptual scenes, mascots, hero/section art, and genuine infographics (Chinese labels are welcome when an infographic is genuinely the right call).
+
 ## 1.1.0 - 2026-06-22
 
 ### Changed
