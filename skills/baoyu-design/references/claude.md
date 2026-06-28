@@ -43,25 +43,30 @@ Serve the whole `designs/` directory once (one server for all projects) and reus
 
 ## Vision input probe
 
-Run this once per design task before the first action that would put image bytes
-into the main conversation: `Read` on a PNG/JPG/WebP, `preview_screenshot`, or a
-subagent asked to visually judge a screenshot.
+Probe **once per session** — the model/provider can't change mid-session, so cache
+the verdict and reuse it for every later design task instead of re-probing. Do this
+before the first action that would put image bytes into the main conversation:
+`Read` on a PNG/JPG/WebP, `preview_screenshot`, or a subagent asked to visually
+judge a screenshot.
 
-1. Create a tiny probe image:
+1. Use the committed probe image shipped with this skill — a tiny colorful square
+   with a dark X/border. Nothing to generate or write; just resolve its absolute
+   path:
 
-   ```bash
-   node -e "require('node:fs').writeFileSync('/tmp/baoyu-design-vision-probe.png', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAzklEQVR42r3UwRWEIAxFUUtLWZYzhdmLLpgDTAjJi+JwWAn5FxXYtv+0UwR2+Zyw/6Rzg6c3o1RCg6drABo83QCIwdNtIDR4+hTwDZ7uAY7B0wNgZvD0GDANno6A0eDpFFAGT08AvcHTc0A1eHoaKAZPb4AcO+zfBR0Cew4oM0vZeqBOq5UrgX5OX7wGUBNU/VNgHB0j7gPmkJlyB5g9nwXlAOe1nMVSwP8r/hePgXBThdvGA8iZIHvfBuCRhgdYA/xG4rdQA1IXavoqfbtdiP/I9rs7olwAAAAASUVORK5CYII=', 'base64'))"
+   ```text
+   <skill>/agents/assets/vision-probe.png
    ```
 
 2. Spawn an `Agent` subagent with the prompt in
    [`../agents/vision-probe-agent.md`](../agents/vision-probe-agent.md), passing
-   only the absolute probe path. The probe is intentionally isolated: a provider
-   that rejects image input should fail inside this disposable subtask, not after
-   a real design screenshot has entered the main task.
+   only that absolute path. Spawn it on the **same model/provider as this session**
+   (the default) so its verdict reflects the main agent's capability. The probe is
+   intentionally isolated: a provider that rejects image input should fail inside
+   this disposable subtask, not after a real design screenshot has entered the main
+   task.
 3. Treat only an exact final response of `VISION_OK` as image support. Any other
-   result — `VISION_UNSUPPORTED`, an Agent/tool error, a timeout, no final
-   response, or extra prose — means **non-visual mode** for the rest of this
-   design task.
+   outcome — `VISION_UNSUPPORTED`, an Agent/tool error, no usable final response,
+   or extra prose — means **non-visual mode** for the rest of this session.
 
 In non-visual mode, do not call `Read` on PNG/JPG/WebP files and do not call
 `preview_screenshot` or any other tool that returns image content to the model.

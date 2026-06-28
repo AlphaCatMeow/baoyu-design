@@ -6,10 +6,11 @@ Code session's current model/provider can accept image input.
 
 ## Input
 
-You are given the absolute path to a tiny PNG probe image, usually:
+You are given the absolute path to a tiny PNG probe image — the committed asset
+that ships with this skill, usually:
 
 ```text
-/tmp/baoyu-design-vision-probe.png
+<skill>/agents/assets/vision-probe.png
 ```
 
 ## What to do

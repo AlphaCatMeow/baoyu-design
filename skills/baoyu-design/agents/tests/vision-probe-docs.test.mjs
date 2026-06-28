@@ -40,3 +40,25 @@ test('generic verification instructions no longer require visual image input', (
   assert.match(systemPrompt, /do not read screenshots back into the model/);
   assert.match(verifier, /Skip screenshot\s+reads only when the caller explicitly says image input is unsupported/);
 });
+
+test('vision probe uses a committed PNG asset, not a hardcoded /tmp write', () => {
+  const png = fs.readFileSync(path.join(SKILL_DIR, 'agents/assets/vision-probe.png'));
+  assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.ok(png.length > 0);
+
+  const claude = readSkill('references/claude.md');
+  const probe = readSkill('agents/vision-probe-agent.md');
+
+  assert.match(claude, /agents\/assets\/vision-probe\.png/);
+  assert.match(probe, /agents\/assets\/vision-probe\.png/);
+  assert.doesNotMatch(claude, /\/tmp\/baoyu-design-vision-probe\.png/);
+  assert.doesNotMatch(claude, /writeFileSync/);
+  assert.doesNotMatch(probe, /\/tmp\/baoyu-design-vision-probe\.png/);
+});
+
+test('vision probe verdict is probed once per session and cached', () => {
+  const claude = readSkill('references/claude.md');
+
+  assert.match(claude, /once per session/i);
+  assert.match(claude, /cache\s+the verdict/i);
+});
