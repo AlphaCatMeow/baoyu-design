@@ -32,7 +32,7 @@ Export the current HTML design as a print-friendly HTML file optimized for PDF e
      animation-play-state: running !important; transition-duration: 0s !important;
    }
    ```
-   For `<deck-stage>` decks, also set `data-deck-active` on **every** direct-child slide (not just the current one) so `[data-deck-active]`-keyed entrance styles resolve on every page. deck-stage.js already lays out one slide per page at print, so with the CSS above and the attribute set, the copy is print-ready.
+   For `<deck-stage>` decks, also set `data-deck-active` on **every** direct-child slide (not just the current one) so `[data-deck-active]`-keyed entrance styles resolve on every page. deck-stage.js already lays out one slide per page at print, so with the CSS above and the attribute set, the copy is print-ready. `data-anim` builds need nothing extra — their runtime hiding is `@media screen`-scoped, so print/PDF always shows the finished layout.
 
    For `.dc.html` Design Component files, keep the `<script src="support.js">` reference and the `<x-dc>` template intact — do NOT flatten the rendered output into static HTML. The runtime mounts React at load time, so layer your `@media print` CSS on top of the existing document and let the component render itself in the print tab.
 

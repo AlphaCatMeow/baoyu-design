@@ -11,7 +11,7 @@ Every slide is an exercise in both layout design and copywriting. Write an outli
 If a user does not tell you how long they want a presentation to be, in minutes, ask them.
 If the user does not tell you the visual aesthetic they want, and they do not provide a design system, use `AskUserQuestion` to ASK what they want. Don't just provide a generic design!
 
-Build at 1920×1080 (16:9). Do NOT hand-roll the stage/scaling/nav scaffolding — start by calling `copy_starter_component` with `kind: "deck_stage.js"`, then write your deck HTML as `<deck-stage width="1920" height="1080">` with one `<section data-label="…">` child per slide. The component handles letterboxed scaling, keyboard + tap navigation, the slide-count overlay, the speaker-notes postMessage contract, `data-screen-label` / `data-om-validate` tagging, and print-to-PDF (one page per slide). Load it with a plain `<script src="deck-stage.js"></script>` — it is vanilla JS, not JSX. (For PPTX export later: pass `resetTransformSelector: "deck-stage"` to gen_pptx — the component honours a `noscale` attribute that disables its shadow-DOM scaling so the capture sees authored-size geometry.)
+Build at 1920×1080 (16:9). Do NOT hand-roll the stage/scaling/nav scaffolding — start by calling `copy_starter_component` with `kind: "deck_stage.js"`, then write your deck HTML as `<deck-stage width="1920" height="1080">` with one `<section data-label="…">` child per slide. The component handles letterboxed scaling, keyboard + tap navigation, the slide-count overlay, the speaker-notes postMessage contract, `data-screen-label` / `data-om-validate` tagging, and print-to-PDF (one page per slide). Load it with a plain `<script src="deck-stage.js"></script>` — it is vanilla JS, not JSX. (For PPTX export later: pass `resetTransformSelector: "deck-stage"` to gen_pptx — the component honours a `noscale` attribute that disables its shadow-DOM scaling so the capture sees authored-size geometry, and any `data-anim` builds are exported as native PowerPoint animations.)
 
 Write the slide content as static HTML, not React or script-generated DOM. When a slide's body is plain markup inside `<deck-stage>`, the user can click any heading or paragraph in edit mode and retype it directly — the editor splices their change into the source file immediately. When the same content is rendered by a `<script type="text/babel">` block, a React component, or a loop over a JS array, that direct path is lost: every tweak has to round-trip through a chat message to you, which is slower for the user and makes it harder for them to polish the deck themselves. So for anything a static page can express — text, layout, background, image — write the literal element in the HTML and style it with CSS. Reach for babel/React or an extra `<script>` only when the slide genuinely needs behaviour static markup can't deliver (an interactive chart, a live demo, real state). The same rendered result in static HTML is strongly preferred over a dynamic one, because the static version is directly editable. The Tweaks panel (`tweaks-panel.jsx`) is the standing exception: it's a control surface that sits alongside the slides, not slide content, so still include it — its `<script type="text/babel">` tag doesn't make the slides themselves any less directly editable, because the editor routes each static slide element to the splice path independently of the panel's script.
 
@@ -21,7 +21,7 @@ Use large type sizes (at least 48px for titles). When the user asks for a specif
 
 Image usage: make sure to view images and decide how they can best be displayed. Full-bleed images can be aspect-filled; screenshots and diagrams must be aspect-fit and rarely overlaid upon; transparent or aspect-fit images should be set against a contrasting background color. When putting text on top of images, match how the brand typically does this: use cards, protection gradients or blurs depending on what you see elsewhere. A full-bleed image set `position: absolute; inset: 0` sizes against its nearest positioned ancestor, so its container must truly fill the slide (see the wrapper-fill rule below) — otherwise the image collapses to nothing or covers only the top band of the slide.
 
-Use smooth transitions between slides. Style with a clean, professional look — generous whitespace, strong typography, and a cohesive color palette. Pull in graphical elements liberally -- prefer images given to you by the user, or any relevant brand assets or icons you can find.
+Use smooth transitions between slides. For per-element builds within a slide, use the `data-anim` convention (see *Animations* below) rather than ad-hoc CSS — those builds survive PPTX export as native PowerPoint animations. Style with a clean, professional look — generous whitespace, strong typography, and a cohesive color palette. Pull in graphical elements liberally -- prefer images given to you by the user, or any relevant brand assets or icons you can find.
 
 Do not use emoji or self-drawn assets unless asked. Use icons from your design system / brand, or images provided by the user.
 
@@ -47,6 +47,52 @@ section[data-label] > *:not(img):not(picture):not(video):not(svg):not(canvas) {
 ```
 
 Keep one in-flow wrapper per slide. A second top-level element (page number, corner mark) should be `position: absolute` with its own size, so the rule doesn't stretch it to fill the stage.
+
+## Animations (optional — they export to PowerPoint)
+
+Most slides need no animation. Animate only when the order of reveal carries meaning — building a list point-by-point, landing a number, walking a diagram step by step. One or two animated slides in a ten-slide deck is usually right; when in doubt, add none.
+
+Author the slide in its **final visible layout** — the CSS you write is the finished slide. Then put `data-anim` attributes on elements **inside** the slide `<section>` (never on the section itself). deck-stage hides the entrance targets and plays the builds when the slide activates; print, thumbnails, and PPTX capture all see the finished layout automatically, with zero extra work from you (under reduced-motion the builds apply instantly instead of animating, but click steps still gate — build order is content, not decoration). Entrances animate from hidden to your authored state, exits from your authored state to hidden, emphasis and paths start from it.
+
+### Effects
+
+| `data-anim` | PowerPoint effect | Kind | Extra attribute |
+|---|---|---|---|
+| `appear` / `disappear` | Appear / Disappear | entrance / exit | — (instant; duration ignored) |
+| `fade-in` / `fade-out` | Fade | entrance / exit | — |
+| `fly-in` / `fly-out` | Fly In / Fly Out | entrance / exit | `data-anim-dir` |
+| `wipe-in` | Wipe | entrance | `data-anim-dir` |
+| `zoom-in` / `zoom-out` | Zoom | entrance / exit | — |
+| `spin` | Spin | emphasis | `data-anim-rotate` (degrees; default `360`, negative = counter-clockwise) |
+| `grow` / `shrink` | Grow/Shrink | emphasis | `data-anim-scale` (default `1.5` / `0.67`) |
+| `path` | Custom motion path | motion path | `data-anim-path` (required) |
+
+`data-anim-dir`: `left` / `right` / `top` / `bottom` (default `bottom`) — the edge the element flies in from, out to, or wipes from.
+
+`data-anim-path` is a small SVG-path subset in slide px, as offsets from the element's resting position (+y is down): an optional leading `M x y` (the path is rebased to start at 0,0), then `L x y` and `C x1 y1 x2 y2 x y` segments, comma- or whitespace-separated, up to 32 points. `data-anim-path="L 240 0"` moves the element 240px right; `data-anim-path="C 100 -200 300 -200 400 0"` arcs it up and over.
+
+### Sequencing
+
+| Attribute | Values | Default |
+|---|---|---|
+| `data-anim-trigger` | `click` / `with` / `after` | `after` |
+| `data-anim-delay` | ms, integer | `0` |
+| `data-anim-duration` | ms, integer | `500` for fade/fly/wipe/zoom; `2000` for spin/grow/shrink/path; appear/disappear are instant |
+| `data-anim-order` | integer | document order |
+
+Animations sort by `data-anim-order`, then document order to break ties. `click` starts a new step and waits for the presenter — →/Space/tap play the next step before advancing the slide; `after` starts once everything already scheduled in the step has finished (PowerPoint's *After Previous*); `with` starts together with the previous one; `data-anim-delay` shifts the start in every case. Everything before the first `click` is an automatic lead-in that plays when the slide activates — so a lone `data-anim="fade-in"` simply plays on arrival, and `click` is the explicit opt-in to presenter-paced builds.
+
+```html
+<ul>
+  <li data-anim="fade-in" data-anim-trigger="click">Ship the beta</li>
+  <li data-anim="fade-in" data-anim-trigger="click">Watch retention</li>
+  <li data-anim="fade-in" data-anim-trigger="click">Raise the price</li>
+</ul>
+<!-- lands together with the third click -->
+<p class="big-number" data-anim="zoom-in" data-anim-trigger="with">3.4×</p>
+```
+
+Don't combine `data-anim` with a hand-written `[data-deck-active]` CSS animation on the same element — pick one. Plain CSS entrance animations remain fine for pure decoration, but they do **not** export to PPTX; only `data-anim` builds do.
 
 ## Illustrations & infographics (generate them when they'll help)
 
